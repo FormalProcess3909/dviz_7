@@ -52,13 +52,9 @@ class TweetDashboard extends Component {
     // Create a force simulation
     const simulation = d3
         .forceSimulation(nodes)
-        .force(
-            "x",
-            d3.forceX((d) => width / 2).strength(0.05) // Horizontally center the nodes
+        .force("x",d3.forceX((d) => width / 2).strength(0.05) // Horizontally center the nodes
         )
-        .force(
-            "y",
-            d3.forceY((d) => monthCenters[d.Month]).strength(0.3) // Pull nodes toward respective month clusters
+        .force("y", d3.forceY((d) => monthCenters[d.Month]).strength(0.3) // Pull nodes toward respective month clusters
         )
         .force("collide", d3.forceCollide(8)) // Increase collision radius to create proper spacing
         .on("tick", ticked);
