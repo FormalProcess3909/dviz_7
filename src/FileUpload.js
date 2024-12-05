@@ -17,7 +17,7 @@ class FileUpload extends Component {
       reader.onload = (e) => {
         try {
           const jsonData = JSON.parse(e.target.result); // Parse JSON
-          // console.log("Parsed JSON Data:", jsonData); // Log the parsed JSON data
+          console.log("Parsed JSON Data:", jsonData); // Log the parsed JSON data
           this.props.set_data(jsonData); // Pass parsed JSON to parent component
         } catch (error) {
           console.error("Error parsing JSON file:", error);
