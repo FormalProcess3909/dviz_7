@@ -1,25 +1,30 @@
-import logo from './logo.svg';
-import './App.css';
+import React, { Component } from "react";
+import "./App.css";
+import FileUpload from "./FileUpload";
+import TweetDashboard from "./TweetDashboard";
 
-function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+class App extends Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      data: [],
+    };
+  }
+
+  set_data = (json_data) => {
+    this.setState({ data: json_data });
+  };
+
+  render() {
+    return (
+      <div>
+        <FileUpload set_data={this.set_data}></FileUpload>
+        <div className="parent">
+          <TweetDashboard json_data={this.state.data}></TweetDashboard>
+        </div>
+      </div>
+    );
+  }
 }
 
 export default App;
