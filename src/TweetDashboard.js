@@ -1,7 +1,15 @@
 import React, { Component } from "react";
 import * as d3 from "d3";
+import "./TweetDashboard.css";
 
 class TweetDashboard extends Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      sentiment: true, // Default to sentiment-based coloring
+    };
+  }
+
   componentDidMount() {
     this.createVisualization();
   }
@@ -12,85 +20,148 @@ class TweetDashboard extends Component {
 
   createVisualization() {
     const { json_data } = this.props;
+    const { sentiment } = this.state;
 
-    // Clear previous SVG content
+    // Clear previous visualization
     d3.select("#dashboard").selectAll("*").remove();
 
     // Define dimensions
     const width = 800;
-    const height = 700; // Increased height for better spacing
-    const margin = { top: 50, right: 50, bottom: 50, left: 100 };
+    const height = 600;
+    const margin = { top: 50, right: 50, bottom: 50, left: 50 };
 
-    // Create SVG canvas
+    // Create SVG elements
     const svg = d3
-        .select("#dashboard")
-        .append("svg")
-        .attr("width", width)
-        .attr("height", height);
+      .select("#dashboard")
+      .append("svg")
+      .attr("width", width)
+      .attr("height", height)
+      .append("g")
+      .attr("transform", `translate(${margin.left},${margin.top})`);
 
-    // Scale for sentiment color
+    // Define scales
     const sentimentColorScale = d3
-        .scaleLinear()
-        .domain([-1, 0, 1])
-        .range(["red", "#ECECEC", "green"]);
+      .scaleLinear()
+      .domain([-1, 0, 1])
+      .range(["red", "#ECECEC", "green"]);
+    const subjectivityColorScale = d3
+      .scaleLinear()
+      .domain([0, 1])
+      .range(["#ECECEC", "#4467C4"]);
 
-    // Group tweets by month
-    const months = ["March", "April", "May"];
+    // Month centers
     const monthCenters = {
-        March: margin.top + 100,
-        April: height / 2,
-        May: height - 100,
+      March: 50,
+      April: 200,
+      May: 350,
     };
 
-    // Add circles for tweets
-    const nodes = json_data.map((d) => ({
-        ...d,
-        x: width / 2 + Math.random() * 50, // Initialize random x
-        y: height / 2 + Math.random() * 50, // Initialize random y
-    }));
-
-    // Create a force simulation
+    // Force simulation
     const simulation = d3
-        .forceSimulation(nodes)
-        .force("x",d3.forceX((d) => width / 2).strength(0.05) // Horizontally center the nodes
-        )
-        .force("y", d3.forceY((d) => monthCenters[d.Month]).strength(0.3) // Pull nodes toward respective month clusters
-        )
-        .force("collide", d3.forceCollide(8)) // Increase collision radius to create proper spacing
-        .on("tick", ticked);
+      .forceSimulation(json_data)
+      .force("x", d3.forceX((d) => width / 2).strength(0.05))
+      .force("y", d3.forceY((d) => monthCenters[d.Month]).strength(0.5))
+      .force("collide", d3.forceCollide(8))
+      .on("tick", ticked);
 
     function ticked() {
-        const circles = svg.selectAll("circle").data(nodes);
+      const circles = svg.selectAll("circle").data(json_data, (d) => d.Idx);
 
-        circles
-            .enter()
-            .append("circle")
-            .merge(circles)
-            .attr("cx", (d) => d.x)
-            .attr("cy", (d) => d.y)
-            .attr("r", 6) // Slightly larger radius for better visibility
-            .attr("fill", (d) => sentimentColorScale(d.Sentiment))
-            .attr("stroke", "none");
+      circles
+        .enter()
+        .append("circle")
+        .attr("r", 6)
+        .attr("fill", (d) =>
+          sentiment
+            ? sentimentColorScale(d.Sentiment)
+            : subjectivityColorScale(d.Subjectivity)
+        )
+        .merge(circles)
+        .attr("cx", (d) => d.x + (width / 2 - margin.left - margin.right - 400) / 2)
+        .attr("cy", (d) => d.y)
+        .on("click", function (e, d) {
+          const selected = d3.select(this);
+          if (selected.attr("stroke") === "black") {
+            selected.attr("stroke", "none");
+            d3.select(`.tweetText${d.Idx}`).remove();
+          } else {
+            selected.attr("stroke", "black");
+            d3.select(".tweets")
+              .append("p")
+              .attr("class", `tweetText${d.Idx}`)
+              .text(d.RawTweet);
+          }
+        });
 
-        circles.exit().remove();
+      circles.exit().remove();
     }
 
     // Add month labels
-    svg.selectAll("text")
-        .data(months)
-        .enter()
-        .append("text")
-        .attr("x", margin.left / 2)
-        .attr("y", (d) => monthCenters[d] - 70) // Position labels above clusters
-        .attr("dy", "0.35em")
-        .style("font-size", "14px")
-        .style("font-weight", "bold")
-        .text((d) => d);
-}
+    svg
+      .selectAll(".monthLabel")
+      .data(Object.keys(monthCenters))
+      .join("text")
+      .attr("class", "monthLabel")
+      .attr("x", 10)
+      .attr("y", (d) => monthCenters[d])
+      .text((d) => d);
 
+    // Add legend
+    const legend = d3
+      .select("#dashboard")
+      .append("svg")
+      .attr("width", 100)
+      .attr("height", 600)
+      .style("overflow", "visible")
+      .attr("transform", `translate(${width / 2 - 300}, ${margin.top})`);
+
+    const gradientData = sentiment
+      ? d3.range(-1, 1.1, 0.1)
+      : d3.range(0, 1.05, 0.05);
+
+    legend
+      .selectAll(".gradientSquare")
+      .data(gradientData)
+      .join("rect")
+      .attr("class", "gradientSquare")
+      .attr("x", 10)
+      .attr("y", (d, i) => i * 10)
+      .attr("width", 20)
+      .attr("height", 10)
+      .attr("fill", (d) =>
+        sentiment ? sentimentColorScale(d) : subjectivityColorScale(d)
+      );
+
+    legend
+      .append("text")
+      .attr("x", 35)
+      .attr("y", 10)
+      .text(sentiment ? "Positive" : "Subjective");
+    legend
+      .append("text")
+      .attr("x", 35)
+      .attr("y", 220)
+      .text(sentiment ? "Negative" : "Objective");
+  }
+
+  toggleColorScheme = (e) => {
+    this.setState({ sentiment: e.target.value === "sentiment" });
+  };
 
   render() {
-    return <div id="dashboard"></div>;
+    return (
+      <>
+        <div>
+          <label htmlFor="colorBy">Color By: </label>
+          <select id="colorBy" onChange={this.toggleColorScheme}>
+            <option value="sentiment">Sentiment</option>
+            <option value="subjectivity">Subjectivity</option>
+          </select>
+        </div>
+        <div id="dashboard"></div>
+        <div className="tweets"></div>
+      </>
+    );
   }
 }
 

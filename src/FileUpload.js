@@ -17,7 +17,11 @@ class FileUpload extends Component {
       reader.onload = (e) => {
         const jsonData = JSON.parse(e.target.result); // Parse JSON
         console.log("Parsed JSON Data:", jsonData); // Log the parsed JSON data
-        this.props.set_data(jsonData); 
+
+        // Extract just the first 300 rows
+        const fir300Rows_jsonData= jsonData.slice(0,300);
+        // this.props.set_data(jsonData);
+        this.props.set_data(fir300Rows_jsonData);
       };
       reader.readAsText(file); // Read file content as text
     }
